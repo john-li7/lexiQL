@@ -1,11 +1,9 @@
 const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
+
 const path = require('path');
 const router = require('./router');
 const app = express();
-const schema = 
-  
-  
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // route to dummy db
@@ -20,16 +18,6 @@ app.get('/', (req, res) =>
 app.use('*', (req, res) => {
   res.status(404).send('Not Found');
 });
-// route to graphiql playground
-app.use(
-  '/graphiql',
-  getSQLSchema,
-  createGQLSchema,
-  graphqlHTTP({
-    schema: res.locals.executedSchema,
-    graphiql: true,
-  })
-);
 // global error handler
 app.use((err, req, res, next) => {
   console.log('error handler', err);
