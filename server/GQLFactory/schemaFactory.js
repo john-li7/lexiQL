@@ -28,7 +28,12 @@ schemaFactory.createTypes = (sqlSchema) => {
     `  type Mutation {${mutationType}  }\n\n` +
     `${customObjectType}\`;\n\n`;
 
-  return types;
+  const typesClean =
+    `${'  type Query {\n'}${queryType}  }\n\n` +
+    `  type Mutation {${mutationType}  }\n\n` +
+    `${customObjectType}`;
+
+  return { types, typesClean };
 };
 
 schemaFactory.createResolvers = (sqlSchema) => {

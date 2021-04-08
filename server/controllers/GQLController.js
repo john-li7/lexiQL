@@ -5,13 +5,15 @@ const { makeExecutableSchema } = require('graphql-tools');
 GQLController.createGQLSchema = (req, res, next) => {
   const { SQLSchema } = res.locals;
   try {
-    const types = createTypes(SQLSchema);
-    console.log('TYPES: ', types);
+    const { types, typesClean } = createTypes(SQLSchema);
     const resolvers = createResolvers(SQLSchema);
-    const typeDefs = types;
+    console.log('types: ', types);
+    console.log('typesClean: ', typesClean);
+    // console.log('resolvers: ', resolvers);
+    // console.log('resolvers: ', JSON.parse(resolvers));
     res.locals.GQLSchema = { types, resolvers };
-    res.locals.executedSchema = makeExecutableSchema({ typeDefs, resolvers });
-    console.log('RES.LOCALS.EXECUTEDSCHEMA: ', res.locals.executedSchema);
+    // res.locals.executedSchema = makeExecutableSchema({ typesClean, resolvers });
+    // console.log('RES.LOCALS.EXECUTEDSCHEMA: ', res.locals.executedSchema);
     return next();
   } catch (err) {
     const errObject = {
