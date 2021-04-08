@@ -34,12 +34,15 @@ router.post(
   }
 );
 // route to graphiql playground
-router.use('/graphiql', getSQLSchema, createGQLSchema, (req, res) => {
-  graphqlHTTP({
+router.use(
+  '/graphiql',
+  getSQLSchema,
+  createGQLSchema,
+  graphqlHTTP((req, res) => ({
     schema: res.locals.executedSchema,
     graphiql: true,
-  });
-});
+  }))
+);
 /* Route to get user (table specific) GraphQL Schema and Resolvers */
 // router.post('gql-schema', GQLController.createGQLSchema,
 // (req, res) => {res.status(200).json(res.locals.GQLSchema)

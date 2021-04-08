@@ -28,12 +28,12 @@ schemaFactory.createTypes = (sqlSchema) => {
     `  type Mutation {${mutationType}  }\n\n` +
     `${customObjectType}\`;\n\n`;
 
-  const typesClean =
+  const typeDefs =
     `${'  type Query {\n'}${queryType}  }\n\n` +
     `  type Mutation {${mutationType}  }\n\n` +
     `${customObjectType}`;
 
-  return { types, typesClean };
+  return { types, typeDefs };
 };
 
 schemaFactory.createResolvers = (sqlSchema) => {
@@ -41,19 +41,29 @@ schemaFactory.createResolvers = (sqlSchema) => {
   let mutationResolvers = '';
   let customObjectTypeResolvers = '';
 
+  // initialize resolversObject for makeExecutableSchema to generate GraphiQL playground
+  const resolversObject = {};
+  resolversObject.Query = {};
+  resolversObject.Mutations = {};
+
   for (const tableName of Object.keys(sqlSchema)) {
+    console.log(resolversObject);
     const tableData = sqlSchema[tableName];
     const { foreignKeys, columns } = tableData;
     if (!isJunctionTable(foreignKeys, columns)) {
-      queryResolvers += collectQueries(tableName, tableData);
-      mutationResolvers += collectMutations(tableName, tableData);
+      queryResolvers += collectQueries(tableName, tableData, resolversObject);
+      mutationResolvers += collectMutations(
+        tableName,
+        tableData,
+        resolversObject
+      );
       customObjectTypeResolvers += collectCustomObjectRelationships(
         tableName,
-        sqlSchema
+        sqlSchema,
+        resolversObject
       );
     }
   }
-
   const resolvers =
     '\nconst resolvers = {\n' +
     '  Query: {' +
@@ -64,7 +74,7 @@ schemaFactory.createResolvers = (sqlSchema) => {
     '  },\n' +
     `    ${customObjectTypeResolvers}\n  }\n`;
 
-  return resolvers;
+  return { resolvers, resolversObject };
 };
 
 module.exports = schemaFactory;

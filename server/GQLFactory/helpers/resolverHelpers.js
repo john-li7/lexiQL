@@ -7,11 +7,22 @@ const resolverHelper = {};
 
 /* */
 
-resolverHelper.queryByPrimaryKey = (tableName, primaryKey) => {
+resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
   let queryName = '';
   if (tableName === singular(tableName)) {
     queryName += `${singular(tableName)}` + `ByID`;
   } else queryName = singular(tableName);
+
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject.Query[queryName] = (parent, args) => {
+    const query = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
+    // ****** to revisit if primaryKey needs to be passed differently ***********
+    const values = [args[primaryKey]];
+    return db
+      .query(query, values)
+      .then((data) => data.rows[0])
+      .catch((err) => new Error(err));
+  };
 
   return `
     ${queryName}: (parent, args) => {
@@ -23,7 +34,16 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey) => {
     },`;
 };
 
-resolverHelper.queryAll = (tableName) => {
+resolverHelper.queryAll = (tableName, resolversObject) => {
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject.Query[tableName] = () => {
+    const query = `SELECT * FROM ${tableName}`;
+    return db
+      .query(query)
+      .then((data) => data.rows)
+      .catch((err) => new Error(err));
+  };
+
   return `
     ${tableName}: () => {
       const query = 'SELECT * FROM ${tableName}';
@@ -35,7 +55,12 @@ resolverHelper.queryAll = (tableName) => {
 
 /* */
 
-resolverHelper.createMutation = (tableName, primaryKey, columns) => {
+resolverHelper.createMutation = (
+  tableName,
+  primaryKey,
+  columns,
+  resolversObject
+) => {
   const mutationName = toCamelCase('add_' + singular(tableName));
   const columnsArray = Object.keys(columns).filter(
     (column) => column !== primaryKey
@@ -45,6 +70,17 @@ resolverHelper.createMutation = (tableName, primaryKey, columns) => {
     .map((column, i) => `$${i + 1}`)
     .join(', ');
   const valuesList = columnsArray.map((column) => `args.${column}`).join(', ');
+
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject.Mutations[mutationName] = (parent, args) => {
+    const query = `INSERT INTO ${tableName} (${columnsArgument}) VALUES (${valuesArgument}) RETURNING *`;
+    // ****** TO REVISIT IF valuesList IS BEING PASSED IN CORRECTLY *********
+    const values = valuesList;
+    return db
+      .query(query, values)
+      .then((data) => data.rows[0])
+      .catch((err) => new Error(err));
+  };
 
   return `
     ${mutationName}: (parent, args) => {
@@ -56,7 +92,12 @@ resolverHelper.createMutation = (tableName, primaryKey, columns) => {
     },`;
 };
 
-resolverHelper.updateMutation = (tableName, primaryKey, columns) => {
+resolverHelper.updateMutation = (
+  tableName,
+  primaryKey,
+  columns,
+  resolversObject
+) => {
   const mutationName = toCamelCase('update_' + singular(tableName));
   const columnsArray = Object.keys(columns).filter(
     (column) => column != primaryKey
@@ -70,6 +111,17 @@ resolverHelper.updateMutation = (tableName, primaryKey, columns) => {
   ];
   const primaryKeyArgument = `$${columnsArray.length + 1}`;
 
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject.Mutations[mutationName] = (parent, args) => {
+    const query = `UPDATE ${tableName} SET ${setStatement} WHERE ${primaryKey} = ${primaryKeyArgument} RETURNING *`;
+    // ****** TO REVISIT IF valuesList IS BEING PASSED IN CORRECTLY, may need to create a new variable to parse through *********
+    const values = valuesList;
+    return db
+      .query(query, values)
+      .then((data) => data.rows[0])
+      .catch((err) => new Error(err));
+  };
+
   return `
     ${mutationName}: (parent, args) => {
       const query = 'UPDATE ${tableName} SET ${setStatement} WHERE ${primaryKey} = ${primaryKeyArgument} RETURNING *';
@@ -80,8 +132,19 @@ resolverHelper.updateMutation = (tableName, primaryKey, columns) => {
     },`;
 };
 
-resolverHelper.deleteMutation = (tableName, primaryKey) => {
+resolverHelper.deleteMutation = (tableName, primaryKey, resolversObject) => {
   const mutationName = toCamelCase('delete_' + singular(tableName));
+
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject.Mutations[mutationName] = (parent, args) => {
+    const query = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
+    // ****** to revisit if primaryKey needs to be passed differently ***********
+    const values = [args[primaryKey]];
+    return db
+      .query(query, values)
+      .then((data) => data.rows[0])
+      .catch((err) => new Error(err));
+  };
 
   return `
     ${mutationName}: (parent, args) => {
