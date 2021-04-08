@@ -158,7 +158,12 @@ resolverHelper.deleteMutation = (tableName, primaryKey, resolversObject) => {
 
 /* */
 
-resolverHelper.identifyRelationships = (tableName, sqlSchema) => {
+resolverHelper.identifyRelationships = (
+  tableName,
+  sqlSchema,
+  resolversObject,
+  resolverName
+) => {
   const { primaryKey, referencedBy, foreignKeys } = sqlSchema[tableName];
   let resolverBody = '';
   /* Keeps track of custom object types already added to resolverBody string */
@@ -212,7 +217,9 @@ resolverHelper.identifyRelationships = (tableName, sqlSchema) => {
               refByTable, // ------------------species_in_films
               refByTableFK, // ----------------film_id
               refByTableFKName, // ------------films
-              refByTableFKKey // --------------_id
+              refByTableFKKey, // --------------_id
+              resolversObject,
+              resolverName
             );
           }
         }
@@ -227,7 +234,9 @@ resolverHelper.identifyRelationships = (tableName, sqlSchema) => {
           tableName,
           primaryKey,
           refByTable,
-          refByKey
+          refByKey,
+          resolversObject,
+          resolverName
         );
       }
     }
@@ -244,7 +253,9 @@ resolverHelper.identifyRelationships = (tableName, sqlSchema) => {
             primaryKey,
             fk,
             fkTableName,
-            fkKey
+            fkKey,
+            resolversObject,
+            resolverName
           );
         }
       }
@@ -260,11 +271,24 @@ resolverHelper.junctionTableRelationships = (
   refByTable,
   refByTableFK,
   refByTableFKName,
-  refByTableFKKey
+  refByTableFKKey,
+  resolversObject,
+  resolverName
 ) => {
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject[resolverName][refByTableFKName] = (tableName) => {
+    const query = `SELECT * FROM ${refByTableFKName} LEFT OUTER JOIN ${refByTable} ON ${refByTableFKName}.${refByTableFKKey} = ${refByTable}.${refByTableFK} WHERE ${refByTable}.${refByTableTableNameAlias} = $1`;
+    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
+    const values = [tableName[primaryKey]];
+    return db
+      .query(query, values)
+      .then((data) => data.rows)
+      .catch((err) => new Error(err));
+  };
+
   return `
     ${refByTableFKName}: (${tableName}) => {
-      const query = 'SELECT * FROM ${refByTableFKName} LEFT OUTER JOIN ${refByTable} ON ${refByTableFKName}.${refByTableFKKey} = ${refByTable}.${refByTableFK} WHERE ${refByTable}.${refByTableTableNameAlias} = $1':
+      const query = 'SELECT * FROM ${refByTableFKName} LEFT OUTER JOIN ${refByTable} ON ${refByTableFKName}.${refByTableFKKey} = ${refByTable}.${refByTableFK} WHERE ${refByTable}.${refByTableTableNameAlias} = $1';
       const values = [${tableName}.${primaryKey}];
       return db.query(query, values)
         .then(data => data.rows)
@@ -276,8 +300,25 @@ resolverHelper.customObjectsRelationships = (
   tableName,
   primaryKey,
   refByTable,
-  refByKey
+  refByKey,
+  resolversObject,
+  resolverName
 ) => {
+  const camelCasedRefByTable = toCamelCase(refByTable);
+  const camelCasedTableName = toCamelCase(tableName);
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject[resolverName][camelCasedRefByTable] = (
+    camelCasedTableName
+  ) => {
+    const query = 'SELECT * FROM ${refByTable} WHERE ${refByKey} = $1';
+    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
+    const values = [tableName[primaryKey]];
+    return db
+      .query(query, values)
+      .then((data) => data.rows)
+      .catch((err) => new Error(err));
+  };
+
   return `
     ${toCamelCase(refByTable)}: (${toCamelCase(tableName)}) => {
       const query = 'SELECT * FROM ${refByTable} WHERE ${refByKey} = $1';
@@ -293,8 +334,26 @@ resolverHelper.foreignKeyRelationships = (
   primaryKey,
   fk,
   fkTableName,
-  fkKey
+  fkKey,
+  resolversObject,
+  resolverName
 ) => {
+  const camelCasedFkTableName = toCamelCase(fkTableName);
+  const camelCasedTableName = toCamelCase(tableName);
+  // build resolversObject for makeExecutableSchema to generate GraphiQL playground
+  resolversObject[resolverName][camelCasedFkTableName] = (
+    camelCasedTableName
+  ) => {
+    const query =
+      'SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1';
+    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
+    const values = [tableName[primaryKey]];
+    return db
+      .query(query, values)
+      .then((data) => data.rows)
+      .catch((err) => new Error(err));
+  };
+
   return `
     ${toCamelCase(fkTableName)}: (${toCamelCase(tableName)}) => {
       const query = 'SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1';

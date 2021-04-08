@@ -5,6 +5,8 @@ const {
   collectCustomObjectRelationships,
 } = require('./resolverFactory');
 const { isJunctionTable } = require('./helpers/helperFunctions');
+const { pascalCase } = require('pascal-case');
+const { singular } = require('pluralize');
 /*    High level functions tasked with assembling the Types and the Resolvers */
 schemaFactory = {};
 /*  Creates query, mutation, and custom Object Types  */
@@ -47,7 +49,17 @@ schemaFactory.createResolvers = (sqlSchema) => {
   resolversObject.Mutations = {};
 
   for (const tableName of Object.keys(sqlSchema)) {
-    console.log(resolversObject);
+    const tableData = sqlSchema[tableName];
+    const { foreignKeys, columns } = tableData;
+    if (!isJunctionTable(foreignKeys, columns)) {
+      if (sqlSchema[tableName].referencedBy) {
+        const resolverName = pascalCase(singular(tableName));
+        resolversObject[resolverName] = {};
+      }
+    }
+  }
+
+  for (const tableName of Object.keys(sqlSchema)) {
     const tableData = sqlSchema[tableName];
     const { foreignKeys, columns } = tableData;
     if (!isJunctionTable(foreignKeys, columns)) {

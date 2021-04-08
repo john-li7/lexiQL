@@ -46,7 +46,8 @@ resolverFactory.collectCustomObjectRelationships = (
   const resolverBody = resolverHelper.identifyRelationships(
     tableName,
     sqlSchema,
-    resolversObject
+    resolversObject,
+    resolverName
   );
 
   return `
