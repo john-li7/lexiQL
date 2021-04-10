@@ -6,6 +6,7 @@ const {
   formatGraphData,
 } = require('./controllers/SQLController');
 const { createGQLSchema } = require('./controllers/GQLController');
+const schema = require('./schema');
 
 /* Route for example SQL Schema and example GQL Schema */
 router.get(
@@ -34,15 +35,24 @@ router.post(
   }
 );
 // route to graphiql playground
+// router.use(
+//   '/graphiql',
+//   getSQLSchema,
+//   createGQLSchema,
+//   graphqlHTTP((req, res) => ({
+//     schema: res.locals.executedSchema,
+//     graphiql: true,
+//   }))
+// );
+
 router.use(
   '/graphiql',
-  getSQLSchema,
-  createGQLSchema,
-  graphqlHTTP((req, res) => ({
-    schema: res.locals.executedSchema,
+  graphqlHTTP({
+    schema,
     graphiql: true,
-  }))
+  })
 );
+
 /* Route to get user (table specific) GraphQL Schema and Resolvers */
 // router.post('gql-schema', GQLController.createGQLSchema,
 // (req, res) => {res.status(200).json(res.locals.GQLSchema)

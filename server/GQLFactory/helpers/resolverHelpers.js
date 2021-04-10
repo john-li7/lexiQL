@@ -16,7 +16,6 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Query[queryName] = (parent, args) => {
     const query = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
-    // ****** to revisit if primaryKey needs to be passed differently ***********
     const values = [args[primaryKey]];
     return db
       .query(query, values)
@@ -73,9 +72,10 @@ resolverHelper.createMutation = (
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Mutations[mutationName] = (parent, args) => {
+    const valuesListClean = columnsArray.map((column) => args[column]);
+
     const query = `INSERT INTO ${tableName} (${columnsArgument}) VALUES (${valuesArgument}) RETURNING *`;
-    // ****** TO REVISIT IF valuesList IS BEING PASSED IN CORRECTLY *********
-    const values = valuesList;
+    const values = valuesListClean;
     return db
       .query(query, values)
       .then((data) => data.rows[0])
@@ -113,9 +113,10 @@ resolverHelper.updateMutation = (
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Mutations[mutationName] = (parent, args) => {
+    const valuesListClean = columnsArray.map((column) => args[column]);
+
     const query = `UPDATE ${tableName} SET ${setStatement} WHERE ${primaryKey} = ${primaryKeyArgument} RETURNING *`;
-    // ****** TO REVISIT IF valuesList IS BEING PASSED IN CORRECTLY, may need to create a new variable to parse through *********
-    const values = valuesList;
+    const values = valuesListClean;
     return db
       .query(query, values)
       .then((data) => data.rows[0])
@@ -138,7 +139,6 @@ resolverHelper.deleteMutation = (tableName, primaryKey, resolversObject) => {
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Mutations[mutationName] = (parent, args) => {
     const query = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
-    // ****** to revisit if primaryKey needs to be passed differently ***********
     const values = [args[primaryKey]];
     return db
       .query(query, values)
@@ -278,7 +278,6 @@ resolverHelper.junctionTableRelationships = (
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject[resolverName][refByTableFKName] = (tableName) => {
     const query = `SELECT * FROM ${refByTableFKName} LEFT OUTER JOIN ${refByTable} ON ${refByTableFKName}.${refByTableFKKey} = ${refByTable}.${refByTableFK} WHERE ${refByTable}.${refByTableTableNameAlias} = $1`;
-    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
     const values = [tableName[primaryKey]];
     return db
       .query(query, values)
@@ -311,8 +310,7 @@ resolverHelper.customObjectsRelationships = (
     camelCasedTableName
   ) => {
     const query = 'SELECT * FROM ${refByTable} WHERE ${refByKey} = $1';
-    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
-    const values = [tableName[primaryKey]];
+    const values = [camelCasedTableName[primaryKey]];
     return db
       .query(query, values)
       .then((data) => data.rows)
@@ -322,7 +320,7 @@ resolverHelper.customObjectsRelationships = (
   return `
     ${toCamelCase(refByTable)}: (${toCamelCase(tableName)}) => {
       const query = 'SELECT * FROM ${refByTable} WHERE ${refByKey} = $1';
-      const values = [${tableName}.${primaryKey}];
+      const values = [${toCamelCase(tableName)}.${primaryKey}];
       return db.query(query, values)
         .then(data => data.rows)
         .catch(err => new Error(err));
@@ -346,8 +344,7 @@ resolverHelper.foreignKeyRelationships = (
   ) => {
     const query =
       'SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1';
-    // ****** to revisit if tableName and primaryKey needs to be passed differently ***********
-    const values = [tableName[primaryKey]];
+    const values = [camelCasedTableName[primaryKey]];
     return db
       .query(query, values)
       .then((data) => data.rows)
@@ -357,7 +354,7 @@ resolverHelper.foreignKeyRelationships = (
   return `
     ${toCamelCase(fkTableName)}: (${toCamelCase(tableName)}) => {
       const query = 'SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1';
-      const values = [${tableName}.${primaryKey}];
+      const values = [${toCamelCase(tableName)}.${primaryKey}];
       return db.query(query, values)
         .then(data => data.rows)
         .catch(err => new Error(err));

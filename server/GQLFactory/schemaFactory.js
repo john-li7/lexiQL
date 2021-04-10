@@ -48,6 +48,7 @@ schemaFactory.createResolvers = (sqlSchema) => {
   resolversObject.Query = {};
   resolversObject.Mutations = {};
 
+  // initializing the custom object types on the resolversObject
   for (const tableName of Object.keys(sqlSchema)) {
     const tableData = sqlSchema[tableName];
     const { foreignKeys, columns } = tableData;
