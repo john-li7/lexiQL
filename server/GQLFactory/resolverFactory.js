@@ -1,37 +1,52 @@
 const { pascalCase } = require('pascal-case');
 const { singular } = require('pluralize');
+const { debug } = require('webpack');
 const resolverHelper = require('./helpers/resolverHelpers');
 const resolverFactory = {};
 
-resolverFactory.collectQueries = (tableName, tableData, resolversObject) => {
+resolverFactory.collectQueries = (
+  tableName,
+  tableData,
+  resolversObject,
+  db
+) => {
   const { primaryKey } = tableData;
   const queryByPK = resolverHelper.queryByPrimaryKey(
     tableName,
     primaryKey,
-    resolversObject
+    resolversObject,
+    db
   );
-  const queryAll = resolverHelper.queryAll(tableName, resolversObject);
+  const queryAll = resolverHelper.queryAll(tableName, resolversObject, db);
   return `\n${queryByPK}\n${queryAll}`;
 };
 /* -------------------------------- */
-resolverFactory.collectMutations = (tableName, tableData, resolversObject) => {
+resolverFactory.collectMutations = (
+  tableName,
+  tableData,
+  resolversObject,
+  db
+) => {
   const { primaryKey, columns } = tableData;
   const createMutation = resolverHelper.createMutation(
     tableName,
     primaryKey,
     columns,
-    resolversObject
+    resolversObject,
+    db
   );
   const updateMutation = resolverHelper.updateMutation(
     tableName,
     primaryKey,
     columns,
-    resolversObject
+    resolversObject,
+    db
   );
   const deleteMutation = resolverHelper.deleteMutation(
     tableName,
     primaryKey,
-    resolversObject
+    resolversObject,
+    db
   );
   return `${createMutation}\n${updateMutation}\n${deleteMutation}\n`;
 };
@@ -39,7 +54,8 @@ resolverFactory.collectMutations = (tableName, tableData, resolversObject) => {
 resolverFactory.collectCustomObjectRelationships = (
   tableName,
   sqlSchema,
-  resolversObject
+  resolversObject,
+  db
 ) => {
   if (!sqlSchema[tableName].referencedBy) return '';
   const resolverName = pascalCase(singular(tableName));
@@ -47,7 +63,8 @@ resolverFactory.collectCustomObjectRelationships = (
     tableName,
     sqlSchema,
     resolversObject,
-    resolverName
+    resolverName,
+    db
   );
 
   return `

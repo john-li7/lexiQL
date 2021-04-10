@@ -7,28 +7,23 @@ const resolverHelper = {};
 
 /* */
 
-resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
+resolverHelper.queryByPrimaryKey = (
+  tableName,
+  primaryKey,
+  resolversObject,
+  db
+) => {
   let queryName = '';
   if (tableName === singular(tableName)) {
     queryName += `${singular(tableName)}` + `ByID`;
   } else queryName = singular(tableName);
-
-  const pool = new Pool({
-    connectionString:
-      'postgres://zhocexop:Ipv9EKas6bU6z9ehDXZQRorjITIXijGv@ziggy.db.elephantsql.com:5432/zhocexop',
-  });
-
-  const db = {};
-  db.query = (text, params, callback) => {
-    console.log('executed query:', text);
-    return pool.query(text, params, callback);
-  };
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   const camelCaseQueryName = toCamelCase(queryName);
   resolversObject.Query[camelCaseQueryName] = (parent, args) => {
     const query = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
     const values = [args[primaryKey]];
+    console.log('values: ', values);
     return db
       .query(query, values)
       .then((data) => data.rows[0])
@@ -47,26 +42,14 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
     },`;
 };
 
-resolverHelper.queryAll = (tableName, resolversObject) => {
+resolverHelper.queryAll = (tableName, resolversObject, db) => {
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  const pool = new Pool({
-    connectionString:
-      'postgres://zhocexop:Ipv9EKas6bU6z9ehDXZQRorjITIXijGv@ziggy.db.elephantsql.com:5432/zhocexop',
-  });
-
-  const db = {};
-  db.query = (text, params, callback) => {
-    console.log('executed query:', text);
-    return pool.query(text, params, callback);
-  };
-
   const camelCaseTableName = toCamelCase(tableName);
   resolversObject.Query[camelCaseTableName] = () => {
     const query = `SELECT * FROM ${tableName}`;
     return db
       .query(query)
       .then((data) => data.rows)
-      .then((data) => console.log('this is the data: ', data))
       .catch((err) => new Error(err));
   };
   // console.log(resolversObject.Query[tableName]());
@@ -86,7 +69,8 @@ resolverHelper.createMutation = (
   tableName,
   primaryKey,
   columns,
-  resolversObject
+  resolversObject,
+  db
 ) => {
   const mutationName = toCamelCase('add_' + singular(tableName));
   const columnsArray = Object.keys(columns).filter(
@@ -100,10 +84,17 @@ resolverHelper.createMutation = (
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Mutation[mutationName] = (parent, args) => {
-    const valuesListClean = columnsArray.map((column) => args[column]);
-
+    const valuesListClean = columnsArray.map(
+      (column) => args[column]
+      // const columnClean = column.toLowerCase;
+      // args[columnClean];
+    );
+    console.log('args: ', args);
     const query = `INSERT INTO ${tableName} (${columnsArgument}) VALUES (${valuesArgument}) RETURNING *`;
     const values = valuesListClean;
+    console.log('values:', values);
+    // const values = [...args];
+
     return db
       .query(query, values)
       .then((data) => data.rows[0])
@@ -161,7 +152,12 @@ resolverHelper.updateMutation = (
     },`;
 };
 
-resolverHelper.deleteMutation = (tableName, primaryKey, resolversObject) => {
+resolverHelper.deleteMutation = (
+  tableName,
+  primaryKey,
+  resolversObject,
+  db
+) => {
   const mutationName = toCamelCase('delete_' + singular(tableName));
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
@@ -190,7 +186,8 @@ resolverHelper.identifyRelationships = (
   tableName,
   sqlSchema,
   resolversObject,
-  resolverName
+  resolverName,
+  db
 ) => {
   const { primaryKey, referencedBy, foreignKeys } = sqlSchema[tableName];
   let resolverBody = '';
@@ -247,7 +244,8 @@ resolverHelper.identifyRelationships = (
               refByTableFKName, // ------------films
               refByTableFKKey, // --------------_id
               resolversObject,
-              resolverName
+              resolverName,
+              db
             );
           }
         }
@@ -264,7 +262,8 @@ resolverHelper.identifyRelationships = (
           refByTable,
           refByKey,
           resolversObject,
-          resolverName
+          resolverName,
+          db
         );
       }
     }
@@ -283,7 +282,8 @@ resolverHelper.identifyRelationships = (
             fkTableName,
             fkKey,
             resolversObject,
-            resolverName
+            resolverName,
+            db
           );
         }
       }
@@ -301,7 +301,8 @@ resolverHelper.junctionTableRelationships = (
   refByTableFKName,
   refByTableFKKey,
   resolversObject,
-  resolverName
+  resolverName,
+  db
 ) => {
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject[resolverName][refByTableFKName] = (tableName) => {
@@ -329,7 +330,8 @@ resolverHelper.customObjectsRelationships = (
   refByTable,
   refByKey,
   resolversObject,
-  resolverName
+  resolverName,
+  db
 ) => {
   const camelCasedRefByTable = toCamelCase(refByTable);
   const camelCasedTableName = toCamelCase(tableName);
@@ -337,7 +339,7 @@ resolverHelper.customObjectsRelationships = (
   resolversObject[resolverName][camelCasedRefByTable] = (
     camelCasedTableName
   ) => {
-    const query = 'SELECT * FROM ${refByTable} WHERE ${refByKey} = $1';
+    const query = `SELECT * FROM ${refByTable} WHERE ${refByKey} = $1`;
     const values = [camelCasedTableName[primaryKey]];
     return db
       .query(query, values)
@@ -362,7 +364,8 @@ resolverHelper.foreignKeyRelationships = (
   fkTableName,
   fkKey,
   resolversObject,
-  resolverName
+  resolverName,
+  db
 ) => {
   const camelCasedFkTableName = toCamelCase(fkTableName);
   const camelCasedTableName = toCamelCase(tableName);
@@ -370,8 +373,7 @@ resolverHelper.foreignKeyRelationships = (
   resolversObject[resolverName][camelCasedFkTableName] = (
     camelCasedTableName
   ) => {
-    const query =
-      'SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1';
+    const query = `SELECT ${fkTableName}.* FROM ${fkTableName} LEFT OUTER JOIN ${tableName} ON ${fkTableName}.${fkKey} = ${tableName}.${fk} WHERE ${tableName}.${primaryKey} = $1`;
     const values = [camelCasedTableName[primaryKey]];
     return db
       .query(query, values)

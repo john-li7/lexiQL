@@ -21,6 +21,7 @@
   "dependencies": {
     "@antv/g6": "^4.2.3",
     "@mrblenny/react-flow-chart": "0.0.14",
+    "apollo-server-express": "^2.22.2",
     "camelcase": "^6.2.0",
     "codemirror": "^5.60.0",
     "crypto-browserify": "^3.12.0",
