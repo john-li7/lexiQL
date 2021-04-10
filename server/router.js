@@ -35,23 +35,23 @@ router.post(
   }
 );
 // route to graphiql playground
-// router.use(
-//   '/graphiql',
-//   getSQLSchema,
-//   createGQLSchema,
-//   graphqlHTTP((req, res) => ({
-//     schema: res.locals.executedSchema,
-//     graphiql: true,
-//   }))
-// );
-
 router.use(
   '/graphiql',
-  graphqlHTTP({
-    schema,
+  getSQLSchema,
+  createGQLSchema,
+  graphqlHTTP((req, res) => ({
+    schema: res.locals.executedSchema,
     graphiql: true,
-  })
+  }))
 );
+
+// router.use(
+//   '/graphiql',
+//   graphqlHTTP({
+//     schema,
+//     graphiql: true,
+//   })
+// );
 
 /* Route to get user (table specific) GraphQL Schema and Resolvers */
 // router.post('gql-schema', GQLController.createGQLSchema,

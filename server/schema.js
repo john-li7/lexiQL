@@ -836,7 +836,7 @@ const schema = makeExecutableSchema({
   allowUndefinedInResolve: false,
   resolverValidationOptions: {
     // requireResolversForArgs: 'error',
-    requireResolversForAllFields: 'warn',
+    // requireResolversForAllFields: 'warn',
   },
 });
 
