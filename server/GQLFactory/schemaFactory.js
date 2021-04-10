@@ -7,6 +7,7 @@ const {
 const { isJunctionTable } = require('./helpers/helperFunctions');
 const { pascalCase } = require('pascal-case');
 const { singular } = require('pluralize');
+const { Pool } = require('pg');
 /*    High level functions tasked with assembling the Types and the Resolvers */
 schemaFactory = {};
 /*  Creates query, mutation, and custom Object Types  */
@@ -44,9 +45,20 @@ schemaFactory.createResolvers = (sqlSchema) => {
   let customObjectTypeResolvers = '';
 
   // initialize resolversObject for makeExecutableSchema to generate GraphiQL playground
+  const pool = new Pool({
+    connectionString:
+      'postgres://zhocexop:Ipv9EKas6bU6z9ehDXZQRorjITIXijGv@ziggy.db.elephantsql.com:5432/zhocexop',
+  });
+
+  const db = {};
+  db.query = (text, params, callback) => {
+    console.log('executed query:', text);
+    return pool.query(text, params, callback);
+  };
+
   const resolversObject = {};
   resolversObject.Query = {};
-  resolversObject.Mutations = {};
+  resolversObject.Mutation = {};
 
   // initializing the custom object types on the resolversObject
   for (const tableName of Object.keys(sqlSchema)) {

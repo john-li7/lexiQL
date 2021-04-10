@@ -2,7 +2,7 @@ const toCamelCase = require('camelcase');
 const { singular } = require('pluralize');
 const { pascalCase } = require('pascal-case');
 const { isJunctionTable } = require('./helperFunctions');
-
+const { Pool } = require('pg');
 const resolverHelper = {};
 
 /* */
@@ -13,8 +13,20 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
     queryName += `${singular(tableName)}` + `ByID`;
   } else queryName = singular(tableName);
 
+  const pool = new Pool({
+    connectionString:
+      'postgres://zhocexop:Ipv9EKas6bU6z9ehDXZQRorjITIXijGv@ziggy.db.elephantsql.com:5432/zhocexop',
+  });
+
+  const db = {};
+  db.query = (text, params, callback) => {
+    console.log('executed query:', text);
+    return pool.query(text, params, callback);
+  };
+
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  resolversObject.Query[queryName] = (parent, args) => {
+  const camelCaseQueryName = toCamelCase(queryName);
+  resolversObject.Query[camelCaseQueryName] = (parent, args) => {
     const query = `SELECT * FROM ${tableName} WHERE ${primaryKey} = $1`;
     const values = [args[primaryKey]];
     return db
@@ -23,8 +35,10 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
       .catch((err) => new Error(err));
   };
 
+  // console.log(resolversObject.Query[queryName](null,1))
+
   return `
-    ${queryName}: (parent, args) => {
+    ${toCamelCase(queryName)}: (parent, args) => {
       const query = 'SELECT * FROM ${tableName} WHERE ${primaryKey} = $1';
       const values = [args.${primaryKey}];
       return db.query(query, values)
@@ -35,16 +49,30 @@ resolverHelper.queryByPrimaryKey = (tableName, primaryKey, resolversObject) => {
 
 resolverHelper.queryAll = (tableName, resolversObject) => {
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  resolversObject.Query[tableName] = () => {
+  const pool = new Pool({
+    connectionString:
+      'postgres://zhocexop:Ipv9EKas6bU6z9ehDXZQRorjITIXijGv@ziggy.db.elephantsql.com:5432/zhocexop',
+  });
+
+  const db = {};
+  db.query = (text, params, callback) => {
+    console.log('executed query:', text);
+    return pool.query(text, params, callback);
+  };
+
+  const camelCaseTableName = toCamelCase(tableName);
+  resolversObject.Query[camelCaseTableName] = () => {
     const query = `SELECT * FROM ${tableName}`;
     return db
       .query(query)
       .then((data) => data.rows)
+      .then((data) => console.log('this is the data: ', data))
       .catch((err) => new Error(err));
   };
+  // console.log(resolversObject.Query[tableName]());
 
   return `
-    ${tableName}: () => {
+    ${toCamelCase(tableName)}: () => {
       const query = 'SELECT * FROM ${tableName}';
       return db.query(query)
         .then(data => data.rows)
@@ -71,7 +99,7 @@ resolverHelper.createMutation = (
   const valuesList = columnsArray.map((column) => `args.${column}`).join(', ');
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  resolversObject.Mutations[mutationName] = (parent, args) => {
+  resolversObject.Mutation[mutationName] = (parent, args) => {
     const valuesListClean = columnsArray.map((column) => args[column]);
 
     const query = `INSERT INTO ${tableName} (${columnsArgument}) VALUES (${valuesArgument}) RETURNING *`;
@@ -112,7 +140,7 @@ resolverHelper.updateMutation = (
   const primaryKeyArgument = `$${columnsArray.length + 1}`;
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  resolversObject.Mutations[mutationName] = (parent, args) => {
+  resolversObject.Mutation[mutationName] = (parent, args) => {
     const valuesListClean = columnsArray.map((column) => args[column]);
 
     const query = `UPDATE ${tableName} SET ${setStatement} WHERE ${primaryKey} = ${primaryKeyArgument} RETURNING *`;
@@ -137,7 +165,7 @@ resolverHelper.deleteMutation = (tableName, primaryKey, resolversObject) => {
   const mutationName = toCamelCase('delete_' + singular(tableName));
 
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
-  resolversObject.Mutations[mutationName] = (parent, args) => {
+  resolversObject.Mutation[mutationName] = (parent, args) => {
     const query = `DELETE FROM ${tableName} WHERE ${primaryKey} = $1 RETURNING *`;
     const values = [args[primaryKey]];
     return db
@@ -286,7 +314,7 @@ resolverHelper.junctionTableRelationships = (
   };
 
   return `
-    ${refByTableFKName}: (${tableName}) => {
+    ${toCamelCase(refByTableFKName)}: (${toCamelCase(tableName)}) => {
       const query = 'SELECT * FROM ${refByTableFKName} LEFT OUTER JOIN ${refByTable} ON ${refByTableFKName}.${refByTableFKKey} = ${refByTable}.${refByTableFK} WHERE ${refByTable}.${refByTableTableNameAlias} = $1';
       const values = [${tableName}.${primaryKey}];
       return db.query(query, values)
