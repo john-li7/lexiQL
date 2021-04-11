@@ -115,7 +115,8 @@ resolverHelper.updateMutation = (
   tableName,
   primaryKey,
   columns,
-  resolversObject
+  resolversObject,
+  db
 ) => {
   const mutationName = toCamelCase('update_' + singular(tableName));
   const columnsArray = Object.keys(columns).filter(
@@ -133,9 +134,11 @@ resolverHelper.updateMutation = (
   // build resolversObject for makeExecutableSchema to generate GraphiQL playground
   resolversObject.Mutation[mutationName] = (parent, args) => {
     const valuesListClean = columnsArray.map((column) => args[column]);
+    valuesListClean.push(args[primaryKey]);
 
     const query = `UPDATE ${tableName} SET ${setStatement} WHERE ${primaryKey} = ${primaryKeyArgument} RETURNING *`;
     const values = valuesListClean;
+    console.log('values: ', values);
     return db
       .query(query, values)
       .then((data) => data.rows[0])
